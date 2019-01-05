@@ -5,6 +5,7 @@ import xmltodict
 import os
 import time
 from PIL import Image, ImageFont, ImageDraw
+from rgbmatrix import Adafruit_RGBmatrix
 from collections import OrderedDict
 
 # From where? (station code)
@@ -19,7 +20,7 @@ width = 128
 # Screen matrix height
 height = 32
 
-#matrix = Adafruit_RGBmatrix(32,4)
+matrix = Adafruit_RGBmatrix(32,4)
 fps = 20
 
 tcol1 = (220, 160, 0)
@@ -243,31 +244,35 @@ newtrain = 0
 limit = 1500
 image=[]
 
+def clearOnExit():
+    matrix.Clear()
+
+atexit.register(clearOnExit)
+
+image       = Image.new('RGB', (width, height))
+draw        = ImageDraw.Draw(image)
+currentTime = 0.0
+prevTime    = 0.0
+
 yoffset = -2
 y1 = 0 + yoffset
 y2 = 10 + yoffset
 y3 = 20 + yoffset
 y3a = 0
 
-while q < limit:
-    image.append(Image.new('RGB', (width, height)))
-    draw = ImageDraw.Draw(image[q])
-
-    #def clearOnExit():
-        #matrix.Clear()
-    #atexit.register(clearOnExit)
+while True:
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
     
     if newtrain > 0:
-        draw.text((0,y1),"bye bitch", fill=l1col, font=font)
+        draw.text((0,y1),"HOLD", fill=l1col, font=font)
         newtrain = newtrain - 1
         q = q + 1
-        break
+        continue
     
-    # Fetch information again after 30 seconds !!!!!! (count of 200 to be updated when using actual screen)
-    if p > 500:
+    # Fetch information again after 30 seconds
+    if p > (30000/((1/fps))*1000):
         trkey2 = trkey
         print ('1: '+ trkey2)
-        time.sleep(30)
         fetch_railtime()
         print ('2: '+ trkey)
         p = 0
@@ -277,8 +282,7 @@ while q < limit:
                 maxwidth = 128 + font.getsize(tropr[0] + ' service calling at ' + trscp[0] + '.')[0]
             else:
                 maxwidth = 128 + font.getsize(trinf)[0]
-            #q = 0
-            # restore above line when using actual screen!!!!!!!
+            q = 0
             r = 0
             k = 0
             l = 0
@@ -390,9 +394,13 @@ while q < limit:
     r = r + 1
     l = l + 1
     p = p + 1
+    
+    currentTime = time.time()
+	timeDelta   = (1.0 / fps) - (currentTime - prevTime)
+	if(timeDelta > 0.0):
+		time.sleep(timeDelta)
+	prevTime = currentTime
+    
+    matrix.SetImage(image.im.id, 0, 0)
 
-image[0].save('screen.gif',save_all=True,append_images=image[1:],duration=40,loop=0)
-
-currentTime = time.time()
-
-
+#image[0].save('screen.gif',save_all=True,append_images=image[1:],duration=40,loop=0)
